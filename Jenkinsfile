@@ -7,7 +7,7 @@ pipeline {
         */
         choice(
             name: 'DEPLOY_TARGET', 
-            choices: ['ALL-TENANTS', 'tenant-a', 'tenant-b', 'tenant-c', 'tenant-d', 'tenant-e'], 
+            choices: ['tenant-f', 'tenant-a', 'tenant-b', 'tenant-c', 'tenant-d', 'tenant-e'], 
             description: 'Select "ALL-TENANTS" for full automation or a specific tenant for manual override.'
         )
     }
@@ -40,7 +40,7 @@ pipeline {
             steps {
                 script {
                     // Define the list of all your tenants here
-                    def allTenants = ['tenant-a', 'tenant-b', 'tenant-c', 'tenant-d', 'tenant-e']
+                    def allTenants = ['tenant-a', 'tenant-b', 'tenant-c', 'tenant-d', 'tenant-e','tenant-f']
                     def targets = []
 
                     // Logic: If 'ALL-TENANTS' is selected, loop through everyone.
