@@ -2,46 +2,46 @@ pipeline {
     agent any
 
     environment {
-        // AWS Secrets (Mapping your IDs to AWS variables)
+        // These are the IDs you created in Jenkins
         AWS_ACCESS_KEY_ID     = credentials('access-keys')
         AWS_SECRET_ACCESS_KEY = credentials('secret-access')
         
-        // AWS Configuration
+        // Configuration
         AWS_DEFAULT_REGION    = 'us-east-1' 
-        S3_PATH               = "s3://testwebsitefiles/tenant-a/websitefiles/"
-        
-        // GitHub Configuration
-        REPO_URL              = 'https://github.com/Testawsdevops007/websitefilestest.git'
-        GITHUB_CREDS_ID       = 'github-token' // The ID you gave your GitHub PAT in Jenkins
+        S3_DESTINATION        = "s3://testwebsitefiles/tenant-a/websitefiles/"
     }
 
     stages {
-        stage('Checkout Source') {
+        stage('Checkout') {
             steps {
-                echo "Pulling code from GitHub..."
-                // This step clones your repo into the Jenkins workspace
-                git branch: 'main', 
-                    credentialsId: "${GITHUB_CREDS_ID}", 
-                    url: "${REPO_URL}"
+                // 'scm' tells Jenkins to use the repo already linked in the Job settings
+                checkout scm
             }
         }
 
-        stage('Deploy to S3') {
+        stage('Verify & List') {
             steps {
-                echo "Syncing files to ${S3_PATH}..."
-                
-                // The AWS CLI uses the environment variables automatically
-                sh "aws s3 sync . ${S3_PATH} --exclude '.git/*' --exclude 'Jenkinsfile' --delete"
+                echo "Testing AWS connection..."
+                // Basic check to see if we can at least talk to S3
+                sh "aws s3 ls"
+            }
+        }
+
+        stage('Upload') {
+            steps {
+                echo "Uploading files to ${S3_DESTINATION}..."
+                // Simple recursive copy (cp) is safer for troubleshooting than 'sync'
+                sh "aws s3 cp . ${S3_DESTINATION} --recursive --exclude '.git/*' --exclude 'Jenkinsfile'"
             }
         }
     }
 
     post {
         success {
-            echo "✅ Successfully deployed to S3!"
+            echo "✅ Deployment finished successfully!"
         }
         failure {
-            echo "❌ Build failed. Check the logs for GitHub or AWS errors."
+            echo "❌ Deployment failed. Check the logs for 'Explicit Deny' errors."
         }
     }
 }
