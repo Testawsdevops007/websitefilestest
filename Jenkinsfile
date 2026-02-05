@@ -1,35 +1,47 @@
-
 pipeline {
     agent any
 
     environment {
-        // AWS KEYS (Hardcoded for testing)
-        AWS_ACCESS_KEY_ID     = 'AKIAQUFLQDGW4GGKWKFB' 
-        AWS_SECRET_ACCESS_KEY = 'A+nB0YhzRdKa7P1J7jtV1VJq+jEmNn0y1k7GVj+E'
-        AWS_DEFAULT_REGION    = 'us-east-1' // Change to your bucket region
+        // AWS Secrets (Mapping your IDs to AWS variables)
+        AWS_ACCESS_KEY_ID     = credentials('access-keys')
+        AWS_SECRET_ACCESS_KEY = credentials('secret-access')
         
-        // REPO & BUCKET
-        REPO_URL    = 'https://github.com/Testawsdevops007/websitefilestest.git'
-        BUCKET_NAME = 'testwebsitefiles'
+        // AWS Configuration
+        AWS_DEFAULT_REGION    = 'us-east-1' 
+        S3_PATH               = "s3://testwebsitefiles/tenant-a/websitefiles/"
+        
+        // GitHub Configuration
+        REPO_URL              = 'https://github.com/Testawsdevops007/websitefilestest.git'
+        GITHUB_CREDS_ID       = 'github-token' // The ID you gave your GitHub PAT in Jenkins
     }
 
     stages {
-        stage('Clone GitHub Repo') {
+        stage('Checkout Source') {
             steps {
-                // This manually clones the repo into the workspace
-                git url: "${REPO_URL}", branch: 'main' 
-                sh 'ls -la' // List files to confirm they arrived
+                echo "Pulling code from GitHub..."
+                // This step clones your repo into the Jenkins workspace
+                git branch: 'main', 
+                    credentialsId: "${GITHUB_CREDS_ID}", 
+                    url: "${REPO_URL}"
             }
         }
 
-        stage('Upload to S3') {
+        stage('Deploy to S3') {
             steps {
-                echo "Syncing files from GitHub to S3 bucket: ${BUCKET_NAME}"
+                echo "Syncing files to ${S3_PATH}..."
                 
-                // The AWS CLI uses the environment variables above automatically
-                // This syncs the current directory to S3, excluding git metadata
-                sh "aws s3 sync . s3://${BUCKET_NAME}/ --exclude '.git/*'"
+                // The AWS CLI uses the environment variables automatically
+                sh "aws s3 sync . ${S3_PATH} --exclude '.git/*' --exclude 'Jenkinsfile' --delete"
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Successfully deployed to S3!"
+        }
+        failure {
+            echo "❌ Build failed. Check the logs for GitHub or AWS errors."
         }
     }
 }
